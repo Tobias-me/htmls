@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arduino BLE Control</title>
+</head>
+<body>
+  <h1>Contrôle de la LED</h1>
+  <button id="connect">Se connecter</button>
+  <button id="turnOn">Allumer la LED</button>
+  <button id="turnOff">Éteindre la LED</button>
+  <p id="status">Statut : Non connecté</p>
+  <script>
+    let ledCharacteristic;
+
+    document.getElementById('connect').addEventListener('click', async () => {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['19b10000-e8f2-537e-4f6c-d104768a1214']
+        });
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('19b10000-e8f2-537e-4f6c-d104768a1214');
+        ledCharacteristic = await service.getCharacteristic('19b10001-e8f2-537e-4f6c-d104768a1214');
+
+        // Activer les notifications
+        ledCharacteristic.startNotifications();
+        ledCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+          const value = new TextDecoder().decode(event.target.value);
+          document.getElementById('status').innerText = `Statut : ${value}`;
+        });
+
+        document.getElementById('status').innerText = 'Statut : Connecté';
+      } catch (error) {
+        console.error('Erreur de connexion :', error);
+      }
+    });
+
+    document.getElementById('turnOn').addEventListener('click', async () => {
+      if (ledCharacteristic) {
+        await ledCharacteristic.writeValue(new TextEncoder().encode('ON'));
+      }
+    });
+
+    document.getElementById('turnOff').addEventListener('click', async () => {
+      if (ledCharacteristic) {
+        await ledCharacteristic.writeValue(new TextEncoder().encode('OFF'));
+      }
+    });
+  </script>
+</body>
+</html>
